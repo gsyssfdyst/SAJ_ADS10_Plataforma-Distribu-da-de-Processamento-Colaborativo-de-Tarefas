@@ -1,0 +1,18 @@
+{
+    "running_tasks": {
+        "b4fa9a44-11d0-45e2-8641-af4219b0a5fe": {
+            "worker_id": "localhost:50061",
+            "status": "EM_EXECUCAO"
+        }
+    },
+    "workers": [
+        "localhost:50061",
+        "localhost:50062",
+        "localhost:50063"
+    ],
+    "worker_heartbeats": {
+        "localhost:50061": 1758312243.817699,
+        "localhost:50062": 1758312241.48566,
+        "localhost:50063": 1758312240.5194678
+    }
+}

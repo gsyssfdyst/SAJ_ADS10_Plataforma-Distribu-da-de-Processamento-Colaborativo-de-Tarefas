@@ -3,17 +3,10 @@ from concurrent import futures
 import threading
 import time
 
-from protos import tarefas_pb2_grpc
-from orquestrador_backup.servicos_backup import (
-    BackupTaskOrchestratorService,
-    BackupWorkerService,
-    SynchronizationServiceImpl
-)
-# Importa as classes de serviço principal para failover
-from orquestrador.servicos import TaskOrchestratorService, WorkerService
-
-# Variável global para armazenar o último heartbeat do principal
-from orquestrador_backup.servicos_backup import last_primary_heartbeat
+from projeto_distribuido.protos import tarefas_pb2_grpc
+from projeto_distribuido.orquestrador.servicos import TaskOrchestratorService, WorkerService
+from .servicos_backup import SynchronizationServiceImpl, last_primary_heartbeat_time
+from .estado_backup import BackupState
 
 def monitor_workers(state, check_interval=10, heartbeat_timeout=30):
     while True:
@@ -35,31 +28,38 @@ def monitor_workers(state, check_interval=10, heartbeat_timeout=30):
                         state.save_checkpoint()
                     else:
                         print(f"[BACKUP] Nenhum worker disponível para reatribuir a tarefa [{task_id}].")
-            del state.worker_heartbeats[failed_worker]
+            if failed_worker in state.worker_heartbeats:
+                del state.worker_heartbeats[failed_worker]
         time.sleep(check_interval)
 
-def monitor_primary_orchestrator(server, state, heartbeat_timeout=25, check_interval=10):
-    import threading
-    global last_primary_heartbeat
+def monitor_primary_orchestrator(server, state, heartbeat_timeout=25):
     while True:
-        time.sleep(check_interval)
-        now = time.time()
-        # Se nunca recebeu heartbeat, continua aguardando
-        if last_primary_heartbeat is None:
+        time.sleep(5)
+        if last_primary_heartbeat_time.get('time') is None:
             continue
-        # Se passou do timeout, aciona failover
-        if now - last_primary_heartbeat > heartbeat_timeout:
-            print("!!!! FALHA DETECTADA NO ORQUESTRADOR PRINCIPAL. ASSUMINDO CONTROLE !!!!")
-            # Registra os serviços principais no servidor já existente
-            tarefas_pb2_grpc.add_TaskOrchestratorServicer_to_server(TaskOrchestratorService(), server)
+        if time.time() - last_primary_heartbeat_time['time'] > heartbeat_timeout:
+            print("!!!! FALHA NO PRINCIPAL DETECTADA. ASSUMINDO CONTROLE !!!!")
+            tarefas_pb2_grpc.add_TaskOrchestratorServicer_to_server(TaskOrchestratorService(state), server)
             tarefas_pb2_grpc.add_WorkerServiceServicer_to_server(WorkerService(state), server)
-            print("Backup promovido a principal. Serviços de orquestração ativados.")
-            break  # Para o loop de monitoramento
+            print("Backup promovido a principal.")
+            break
 
 def serve():
     state = BackupState()
     state.load_from_checkpoint()
+    
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    tarefas_pb2_grpc.add_SynchronizationServiceServicer_to_server(SynchronizationServiceImpl(state), server)
+    
+    threading.Thread(target=monitor_primary_orchestrator, args=(server, state), daemon=True).start()
+    
+    server.add_insecure_port('[::]:50052')
+    print("Orquestrador Backup iniciado na porta 50052...")
+    server.start()
+    server.wait_for_termination()
 
+if __name__ == "__main__":
+    serve()
     monitor_thread = threading.Thread(target=monitor_workers, args=(state,), daemon=True)
     monitor_thread.start()
 
