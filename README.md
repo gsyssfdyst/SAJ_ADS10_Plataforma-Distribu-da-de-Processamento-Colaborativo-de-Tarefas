@@ -26,7 +26,11 @@ A plataforma permite que clientes submetam trabalhos, que são distribuídos par
 |   |-- orquestrador/       \# Lógica do Coordenador Principal
 |   |-- protos/             \# Arquivos .proto e código gRPC gerado
 |   |-- **init**.py
-|   -- requirements.txt |-- orquestrador-backup/    # Lógica do Coordenador de Backup |-- worker/                 # Lógica dos Nós de Processamento |-- cliente/                # Lógica do Cliente para interação  `-- README.md
+|   |-- requirements.txt 
+|   |-- orquestrador-backup/    \# Lógica do Coordenador de Backup 
+|   |-- worker/                 \# Lógica dos Nós de Processamento 
+|   |-- cliente/                \# Lógica do Cliente para interação 
+| -- README.md
 
 ````
 
