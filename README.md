@@ -1,0 +1,1 @@
+# SAJ_ADS10_Plataforma-Distribu-da-de-Processamento-Colaborativo-de-Tarefas
