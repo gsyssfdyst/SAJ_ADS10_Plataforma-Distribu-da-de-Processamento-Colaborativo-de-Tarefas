@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package tarefas;
+
+import "google/protobuf/empty.proto";
+
+message TaskRequest {
+    string user_id = 1;
+    string user_token = 2;
+    string task_details = 3;
+}
+
+message TaskResponse {
+    string task_id = 1;
+    string status = 2;
+    string message = 3;
+}
+
+message StatusRequest {
+    string task_id = 1;
+}
+
+message StatusResponse {
+    string task_id = 1;
+    string status = 2;
+    string message = 3;
+}
+
+service TaskOrchestrator {
+    rpc SubmitTask(TaskRequest) returns (TaskResponse);
+    rpc CheckTaskStatus(StatusRequest) returns (StatusResponse);
+}
+
+message HeartbeatRequest {
+    string worker_id = 1;
+}
+
+message HeartbeatResponse {
+    // resposta vazia
+}
+
+service WorkerService {
+    rpc SendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message StateUpdateRequest {
+    string state_json = 1;
+}
+
+message StateUpdateResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+service SynchronizationService {
+    rpc UpdateState(StateUpdateRequest) returns (StateUpdateResponse);
+    rpc PrimaryHeartbeat(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message ExecuteTaskRequest {
+    string task_id = 1;
+    string task_details = 2;
+}
+
+message ExecuteTaskResponse {
+    string task_id = 1;
+    string status = 2;
+}
+
+service WorkerNodeService {
+    rpc ExecuteTask(ExecuteTaskRequest) returns (ExecuteTaskResponse);
+}
